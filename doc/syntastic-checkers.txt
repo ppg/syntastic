@@ -4410,11 +4410,13 @@ project's page for details:
 
     http://rakudo.org/
 
+Syntastic requires Rakudo Star release 2017.01 or later.
+
 Security~
 
 This checker runs "perl6 -c" against your files, which executes any "BEGIN"
 and "CHECK" blocks (cf. https://docs.perl6.org/programs/00-running). This
-is probably fine if you wrote the file yourself, but it can be a problem if
+is probably fine if you wrote the files yourself, but it can be a problem if
 you're trying to check third party files. If you are 100% willing to let Vim
 run the code in your files, set 'g:syntastic_enable_perl6_checker' to 1 in
 your vimrc to enable this checker: >

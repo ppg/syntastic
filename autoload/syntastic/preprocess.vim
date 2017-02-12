@@ -209,91 +209,36 @@ function! syntastic#preprocess#perl6(errors) abort " {{{2
         return []
     endif
 
+    let errs = s:_decode_JSON(join(a:errors, ''))
+
     let out = []
-    let fname = ''
-    let line = 0
-    let column = 0
-    let msg = ''
+    if type(errs) == type({})
+        try
+            for val in values(errs)
+                let line = get(val, 'line', 0)
+                let pos = get(val, 'pos', 0)
+                if pos && has('byte_offset')
+                    let line_pos = byte2line(pos + 1)
+                    let column = line_pos > 0 ? pos - line2byte(line_pos) + 2 : 0
+                else
+                    let column = 0
+                endif
 
-    let skip =0
-    for e in a:errors
-        if e =~# '\m^\s*$'
-            continue
-        endif
-
-        if skip
-            if e =~# '\v^\s{4}'
-                continue
-            endif
-            let skip =0
-        endif
-
-        if e =~# '\m^Error while '
-            if msg !=# ''
-                call add(out, join([fname, line, column, msg], ':'))
-            endif
-
-            call add(out, ':0:0:' . e)
-            let fname = ''
-            let line = 0
-            let column = 0
-            let msg = ''
-        elseif e =~# '\m^===SORRY!=== Error while compiling\s'
-            if msg !=# ''
-                call add(out, join([fname, line, column, msg], ':'))
-            endif
-
-            let fname = matchstr(e, '\m^===SORRY!=== Error while compiling\s\zs.*')
-            let line = 0
-            let column = 0
-            let msg = ''
-        elseif e ==# '===SORRY!==='
-            if msg !=# ''
-                call add(out, join([fname, line, column, msg], ':'))
-            endif
-
-            let line = 0
-            let column = 0
-            let msg = ''
-        elseif e =~# '\m^at line \d\+$'
-            let line = matchstr(e, '\m^at line \zs\d\+')
-        elseif e =~# '\m used at line \d\+'
-            let parts = matchlist(e, '\v^\s*(\S+) used at line (\d+)')
-            if len(parts) >= 3
-                let [what, line] = parts[1:2]
-                let msg .= ' ' . what
-            endif
-        elseif e =~# '\m^at .*:\d\+$'
-            let parts = matchlist(e, '\v^at\s+(.*)\:(\d+)$')
-            if len(parts) >= 3
-                let [fname, line] = parts[1:2]
-            endif
-        elseif e =~# '\m^Could not find .* at line \d\+ in:'
-            let parts = matchlist(e, '\v^(Could not find .*) at line (\d+)')
-            if len(parts) >= 3
-                let [msg, line] = parts[1:2]
-            endif
-            let skip = 1
-        elseif e =~# '\m^Could not find .* in:'
-            let msg = matchstr(e, '\m^Could not find .*\ze in:')
-            let skip = 1
-        elseif e =~# '^\m------> \(<BOL>\)\=.\{-}<HERE>'
-            let str = matchstr(e, '^\m------> \(<BOL>\)\=\zs.\{-}\ze<HERE>')
-            let str = has('iconv') && &encoding !=# '' && &encoding !=# 'utf-8' ? iconv(str, 'utf-8', &encoding) : str
-            if syntastic#util#strwidth(str) < 40
-                let column = strlen(str) + 1
-            endif
-        else
-            let e = substitute(e, '\m^\s\+', '', '')
-            let msg .= (msg !=# '' ? ' ' : '') . e
-        endif
-    endfor
-
-    if msg !=# ''
-        call add(out, join([fname, line, column, msg], ':'))
+                call add(out, join([
+                    \ get(val, 'filename', ''),
+                    \ line,
+                    \ column,
+                    \ get(val, 'message', '') ], ':'))
+            endfor
+        catch /\m^Vim\%((\a\+)\)\=:E716/
+            call syntastic#log#warn('checker perl6/perl6: unrecognized error item ' . string(val))
+            let out = []
+        endtry
+    else
+        call syntastic#log#warn('checker perl6/perl6: unrecognized error format')
     endif
 
-    return syntastic#util#unique(out)
+    return out
 endfunction " }}}2
 
 function! syntastic#preprocess#prospector(errors) abort " {{{2

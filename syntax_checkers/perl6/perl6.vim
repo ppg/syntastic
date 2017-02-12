@@ -35,6 +35,10 @@ if !exists('g:syntastic_perl6_lib_path')
     let g:syntastic_perl6_lib_path = []
 endif
 
+if !exists('g:syntastic_perl6_perl6_sort')
+    let g:syntastic_perl6_perl6_sort = 1
+endif
+
 let s:save_cpo = &cpo
 set cpo&vim
 
@@ -42,7 +46,7 @@ function! SyntaxCheckers_perl6_perl6_IsAvailable() dict " {{{1
     " don't call executable() here, to allow things like
     " let g:syntastic_perl6_perl6_exec = '/usr/bin/env perl6'
     silent! call syntastic#util#system(self.getExecEscaped() . ' -e ' . syntastic#util#shescape('exit(0)'))
-    return v:shell_error == 0
+    return (v:shell_error == 0) && syntastic#util#versionIsAtLeast(self.getVersion(), [2017, 1])
 endfunction " }}}1
 
 function! SyntaxCheckers_perl6_perl6_GetHighlightRegex(item) " {{{1
@@ -84,11 +88,11 @@ function! SyntaxCheckers_perl6_perl6_GetLocList() dict " {{{1
     return SyntasticMake({
         \ 'makeprg': makeprg,
         \ 'errorformat': errorformat,
-        \ 'env': { 'RAKUDO_ERROR_COLOR': '0' },
+        \ 'env': { 'RAKUDO_EXCEPTIONS_HANDLER': 'JSON' },
         \ 'defaults': { 'bufnr': bufnr(''), 'type': 'E' },
         \ 'returns': [0, 1],
         \ 'preprocess': 'perl6',
-        \ 'postprocess': ['iconv'] })
+        \ 'postprocess': ['guards', 'iconv'] })
 endfunction " }}}1
 
 call g:SyntasticRegistry.CreateAndRegisterChecker({
