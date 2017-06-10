@@ -20,7 +20,9 @@ set cpo&vim
 
 function! SyntaxCheckers_go_govet_GetLocList() dict
     let buf = bufnr('')
-    let makeprg = self.getExecEscaped() . ' vet'
+    let makeprg = self.makeprgBuild({
+        \ 'exe': 'go tool vet',
+        \ 'tail': '> ' . syntastic#util#DevNull() })
 
     let errorformat =
         \ '%Evet: %.%\+: %f:%l:%c: %m,' .
